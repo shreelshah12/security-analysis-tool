@@ -340,6 +340,31 @@ def load_sat_dasf_mapping():
 
 # COMMAND ----------
 
+# Read and load the SAT and DAGF mapping file. (SAT_DAGF_mapping.csv)
+def load_sat_dagf_mapping():
+  import pandas as pd
+  from os.path import exists
+  import shutil
+
+  
+  prefix = getConfigPath()
+  origfile = f'{prefix}/sat_dagf_mapping.csv'
+    
+  schema_list = ['sat_id', 'dasf_control_id','dasf_control_name']
+
+  schema = '''sat_id int, dasf_control_id string,dasf_control_name string'''
+
+  sat_dagf_mapping_pd = pd.read_csv(origfile, header=0, usecols=schema_list)
+    
+  sat_dagf_mapping = (spark.createDataFrame(sat_dagf_mapping_pd, schema)
+                            .select('sat_id', 'dasf_control_id','dasf_control_name'))
+    
+  sat_dagf_mapping.write.format('delta').mode('overwrite').saveAsTable(json_["analysis_schema_name"]+'.sat_dagf_mapping')
+  display(sat_dagf_mapping) 
+
+
+# COMMAND ----------
+
 
 def getSecurityBestPracticeRecord(id, cloud_type):
     df = spark.sql(

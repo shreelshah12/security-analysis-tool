@@ -1,0 +1,1385 @@
+{
+    "datasets": [
+        {
+            "name": "ac2810e1",
+            "displayName": "category_pillars",
+            "query": "SELECT\n  BP.check_id,\n  check as Check,\n  BP.severity as Severity,\n  score as Status,\n  chk_date as RunDate,\n  concat(\n    '<a  href=\"',\n    BP.doc_url,\n    '\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"remediation documentation\">',\n    BP.recommendation,\n    '</a>'\n  ) as Recommendation,\n  CASE\n    WHEN BP.severity = 'High' THEN 3\n    WHEN BP.severity = 'Medium' THEN 2\n    ELSE 1\n  END as ord,\n  workspaceid,\n  concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") as name,\n  dagf.dasf_control_id as DAGF\nFROM\n  (\n    SELECT\n      id,\n      score,\n      chk_date,\n      workspaceid\n    FROM\n      arunuc.security_analysis.security_checks\n    where\n      run_id = coalesce (\n        (\n          select\n            max(run_id)\n          from\n            arunuc.security_analysis.workspace_run_complete wrc,\n            arunuc.security_analysis.account_workspaces aw\n          where\n            concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n            and wrc.workspace_id = aw.workspace_id\n            and completed = true\n            and chk_date = :date_param\n        ),\n        (\n          select\n            max(run_id)\n          from\n            arunuc.security_analysis.workspace_run_complete wrc,\n            arunuc.security_analysis.account_workspaces aw\n          where\n            concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n            and wrc.workspace_id = aw.workspace_id\n            and completed = true\n        )\n      )\n  ) SC,\n  arunuc.security_analysis.security_best_practices BP,\n  arunuc.security_analysis.sat_dagf_mapping dagf,\n  arunuc.security_analysis.account_workspaces aw\nWHERE\n  SC.id = BP.id\n  and dagf.sat_id = BP.id\n  and concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n  and aw.workspace_id = SC.workspaceid\n  and aw.analysis_enabled = true\nORDER BY\n  Status DESC,\n  ord DESC",
+            "parameters": [
+                {
+                    "displayName": "workspaceid",
+                    "keyword": "workspaceid",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "csp (1624182077688602)"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "Analysis date",
+                    "keyword": "date_param",
+                    "dataType": "DATE",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "DATE",
+                            "values": [
+                                {
+                                    "value": "now"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "367ba156",
+            "displayName": "account_stats",
+            "query": "SELECT\n  name,\n  value.value\nFROM\n  arunuc.security_analysis.account_info ai,\n  arunuc.security_analysis.account_workspaces aw\nwhere\n  category = 'Account Stats'\n  and run_id = coalesce (\n    (\n      select\n        max(run_id)\n      from\n        arunuc.security_analysis.workspace_run_complete wrc,\n        arunuc.security_analysis.account_workspaces aw\n      where\n        concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n        and completed = true\n        and chk_date = :date_param\n        and aw.analysis_enabled = true\n        and aw.workspace_id = wrc.workspace_id\n    ),\n    (\n      select\n        max(run_id)\n      from\n        arunuc.security_analysis.workspace_run_complete wrc,\n        arunuc.security_analysis.account_workspaces aw\n      where\n        concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n        and completed = true\n    )\n  )\n  and concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n  and aw.workspace_id = ai.workspaceid\nORDER BY\n  name",
+            "parameters": [
+                {
+                    "displayName": "workspaceid",
+                    "keyword": "workspaceid",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "1425658296462059"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "Analysis date",
+                    "keyword": "date_param",
+                    "dataType": "DATE",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "DATE",
+                            "values": [
+                                {
+                                    "value": "now"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5e73087c",
+            "displayName": "summary_stats",
+            "query": "Select\n  concat(\n    results.category,\n    ' (Out of ',\n    category_count,\n    ')'\n  ) as category,\n  severity,\n  severity_count,\n  ord\nFROM\n  (\n    SELECT\n      sbp.category,\n      sbp.severity,\n      count(sbp.severity) severity_count,\n      CASE\n        WHEN sbp.severity = 'High' THEN 3\n        WHEN sbp.severity = 'Medium' THEN 2\n        ELSE 1\n      END as ord\n    FROM\n      arunuc.security_analysis.security_checks sc,\n      arunuc.security_analysis.security_best_practices sbp,\n      arunuc.security_analysis.account_workspaces aw\n    where\n      score = 1\n      and sc.id = sbp.id\n      and run_id = coalesce (\n        (\n          select\n            max(run_id)\n          from\n            arunuc.security_analysis.workspace_run_complete wrc,\n            arunuc.security_analysis.account_workspaces aw\n          where\n            concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n            and aw.workspace_id = wrc.workspace_id\n            and completed = true\n            and chk_date = :date_param\n            and aw.analysis_enabled = true\n        ),\n        (\n          select\n            max(run_id)\n          from\n            arunuc.security_analysis.workspace_run_complete wrc,\n            arunuc.security_analysis.account_workspaces aw\n          where\n            concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n            and aw.workspace_id = wrc.workspace_id\n            and completed = true\n        )\n      )\n      and category not IN ('Workspace Settings', 'Workspace Stats')\n      and concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n      and sc.workspaceid = aw.workspace_id\n    group by\n      sbp.category,\n      sbp.severity\n  ) as results,\n  (\n    SELECT\n      category,\n      count(*) as category_count\n    FROM\n      arunuc.security_analysis.security_best_practices\n    WHERE\n      category not IN ('Workspace Settings', 'Workspace Stats')\n    group by\n      category\n  ) as master\nwhere\n  results.category = master.category",
+            "parameters": [
+                {
+                    "displayName": "Workspace",
+                    "keyword": "workspaceid",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "1425658296462059"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "Analysis date (Shows results for the most recent analysis when no analysis is found for this date)",
+                    "keyword": "date_param",
+                    "dataType": "DATE",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "DATE",
+                            "values": [
+                                {
+                                    "value": "now"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2eb723f9",
+            "displayName": "category_counters",
+            "query": "SELECT\n  count(*) as counter\nFROM\n  arunuc.security_analysis.security_checks sc,\n  arunuc.security_analysis.security_best_practices sbp,\n  arunuc.security_analysis.account_workspaces aw\nwhere\n  sc.id = sbp.id\n  and sbp.severity = :severity\n  and sc.score = 1\n  and sbp.category = :category\n  and concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n  and sc.workspaceid = aw.workspace_id\n  and run_id = coalesce (\n    (\n      select\n        max(run_id)\n      from\n        arunuc.security_analysis.workspace_run_complete wrc,\n        arunuc.security_analysis.account_workspaces aw\n      where\n        concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n        and completed = true\n        and chk_date = :date_param\n        and aw.workspace_id = wrc.workspace_id\n    ),\n    (\n      select\n        max(run_id)\n      from\n        arunuc.security_analysis.workspace_run_complete wrc,\n        arunuc.security_analysis.account_workspaces aw\n      where\n        concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n        and completed = true\n        and aw.workspace_id = wrc.workspace_id\n    )\n  )",
+            "parameters": [
+                {
+                    "displayName": "Workspace",
+                    "keyword": "workspaceid",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "1425658296462059"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "severity",
+                    "keyword": "severity",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "High"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "category",
+                    "keyword": "category",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "Network Security"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "Analysis date",
+                    "keyword": "date_param",
+                    "dataType": "DATE",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "DATE",
+                            "values": [
+                                {
+                                    "value": "now"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "7088f4c8",
+            "displayName": "security_check_details",
+            "query": "select\n  sbp.check_id,\n  sbp.check,\n  sbp.recommendation,\n  sc.additional_details,\n  sbp.logic,\n  if(\n    sbp.evaluation_value == \"-1\",\n    \"N/A\",\n    sbp.evaluation_value\n  ) as evaluation_value,\n  regexp_replace(sbp.api, \"<workspace_url>\", aw.deployment_url) as api,\n  sc.check_time\nfrom\n  arunuc.security_analysis.security_checks sc,\n  arunuc.security_analysis.security_best_practices sbp,\n  arunuc.security_analysis.account_workspaces aw\nwhere\n  sc.id = sbp.id\n  and sc.run_id = coalesce (\n    (\n      select\n        max(run_id)\n      from\n        arunuc.security_analysis.workspace_run_complete wrc,\n        arunuc.security_analysis.account_workspaces aw\n      where\n        concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n        and wrc.workspace_id = aw.workspace_id\n        and completed = true\n        and chk_date = :date_param\n    ),\n    (\n      select\n        max(run_id)\n      from\n        arunuc.security_analysis.workspace_run_complete wrc,\n        arunuc.security_analysis.account_workspaces aw\n      where\n        concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n        and wrc.workspace_id = aw.workspace_id\n        and completed = true\n    )\n  )\n  and concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n  and aw.workspace_id = sc.workspaceid",
+            "parameters": [
+                {
+                    "displayName": "workspaceid",
+                    "keyword": "workspaceid",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "1425658296462059"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "Analysis date",
+                    "keyword": "date_param",
+                    "dataType": "DATE",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "DATE",
+                            "values": [
+                                {
+                                    "value": "now"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "de3b92f6",
+            "displayName": "workspace_config_changes",
+            "query": "SELECT\n  sc1.score as current_score,\n  sc2.score as previous_score,\n  BP.check_id,\n  check as Check,\n  BP.severity as Severity,\n  sc1.score as Run1Status,\n  sc2.score as Run2Status,\n  sc1.check_time as Run1Date,\n  sc2.check_time as Run2Date,\n  concat(\n    '<a  href=\"',\n    BP.doc_url,\n    '\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"remediation documentation\">',\n    BP.recommendation,\n    '</a>'\n  ) as Recommendation,\n  CASE\n    WHEN BP.severity = 'High' THEN 3\n    WHEN BP.severity = 'Medium' THEN 2\n    ELSE 1\n  END as ord,\n  sc1.workspaceid\nFROM\n  arunuc.security_analysis.security_checks sc1,\n  arunuc.security_analysis.security_checks sc2,\n  arunuc.security_analysis.security_best_practices BP,\n  arunuc.security_analysis.account_workspaces aw\nwhere\n  concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n  and sc1.workspaceid = aw.workspace_id\n  and sc2.workspaceid = sc1.workspaceid\n  and sc1.id = sc2.id\n  and sc1.id = BP.id\n  and sc1.run_id = coalesce (\n        (\n          select\n            max(run_id)\n          from\n            arunuc.security_analysis.workspace_run_complete wrc,\n            arunuc.security_analysis.account_workspaces aw\n          where\n            concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n            and wrc.workspace_id = aw.workspace_id\n            and completed = true\n            and chk_date = :current_run_date\n        ),\n        (\n          select\n            max(run_id)\n          from\n            arunuc.security_analysis.workspace_run_complete wrc,\n            arunuc.security_analysis.account_workspaces aw\n          where\n            concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n            and wrc.workspace_id = aw.workspace_id\n            and completed = true\n        )\n      )\n  and sc2.run_id = (\n    select\n      max(run_id)\n    from\n      arunuc.security_analysis.workspace_run_complete wrc,\n      arunuc.security_analysis.account_workspaces aw\n    where\n      concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n      and wrc.workspace_id = aw.workspace_id\n      and completed = true\n      and run_id = (\n        select\n          max(run_id)\n        from\n          arunuc.security_analysis.workspace_run_complete wrc,\n          arunuc.security_analysis.account_workspaces aw\n        where\n          concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n          and wrc.workspace_id = aw.workspace_id\n          and completed = true\n          and chk_date = :previous_run_date\n      )\n  )\n  \n ",
+            "parameters": [
+                {
+                    "displayName": "workspaceid",
+                    "keyword": "workspaceid",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "1425658296462059"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "previous_run_date",
+                    "keyword": "previous_run_date",
+                    "dataType": "DATE",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "DATE",
+                            "values": [
+                                {
+                                    "value": "now/d"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "current_run_date",
+                    "keyword": "current_run_date",
+                    "dataType": "DATE",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "DATE",
+                            "values": [
+                                {
+                                    "value": "now/d"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "f1a73f2e",
+            "displayName": "analysis_date_time",
+            "query": "SELECT\n  max(sc.check_time) date\nFROM\n  arunuc.security_analysis.security_checks sc,\n  arunuc.security_analysis.account_workspaces aw\nwhere\n  concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n  and sc.workspaceid = aw.workspace_id\n  and run_id = coalesce (\n    (\n      select\n        max(run_id)\n      from\n        arunuc.security_analysis.workspace_run_complete wrc,\n        arunuc.security_analysis.account_workspaces aw\n      where\n        concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n        and wrc.workspace_id = aw.workspace_id\n        and completed = true\n        and chk_date = :date_param\n    ),\n    (\n      select\n        max(run_id) \n      from\n        arunuc.security_analysis.workspace_run_complete wrc,\n        arunuc.security_analysis.account_workspaces aw\n      where\n        concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\n        and wrc.workspace_id = aw.workspace_id\n        and completed = true\n    )\n  )",
+            "parameters": [
+                {
+                    "displayName": "workspaceid",
+                    "keyword": "workspaceid",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "1425658296462059"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "displayName": "date_param",
+                    "keyword": "date_param",
+                    "dataType": "DATE",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "DATE",
+                            "values": [
+                                {
+                                    "value": "now"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "9264c052",
+            "displayName": "Workspaces",
+            "query": "SELECT\n  workspace_id as value,\n  concat(workspace_name, \" (\", workspace_id, \")\") as name\nFROM\n  arunuc.security_analysis.account_workspaces\nWHERE\n  analysis_enabled = true\norder by workspace_id asc"
+        },
+        {
+            "name": "a4f85627",
+            "displayName": "analysis_dates",
+            "query": "SELECT wrc.chk_date, wrc.workspace_id, concat(aw.workspace_name, \" (\", aw.workspace_id, \")\") as name\nFROM \n    arunuc.security_analysis.workspace_run_complete wrc,\n    arunuc.security_analysis.account_workspaces aw\nWHERE\nconcat(aw.workspace_name, \" (\", aw.workspace_id, \")\") = :workspaceid\nand wrc.workspace_id = aw.workspace_id",
+            "parameters": [
+                {
+                    "displayName": "workspaceid",
+                    "keyword": "workspaceid",
+                    "dataType": "STRING",
+                    "defaultSelection": {
+                        "values": {
+                            "dataType": "STRING",
+                            "values": [
+                                {
+                                    "value": "1425658296462059"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "pages": [
+        {
+            "name": "dd97757d",
+            "displayName": "New Page",
+            "layout": [
+                {
+                    "widget": {
+                        "name": "dad7c130",
+                        "textbox_spec": "# AI Governance\n* AI Organization\n* Ethics & Regulatory Compliance\n* Transparency & Interpretability\n* AI Ops, Data & Infrastructure\n* AI Protection\n"
+                    },
+                    "position": {
+                        "x": 1,
+                        "y": 18,
+                        "width": 2,
+                        "height": 3
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "86af88de",
+                        "textbox_spec": "![alt text](https://databricks.com/wp-content/uploads/2022/02/icon-orange-gdpr.svg)"
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 18,
+                        "width": 1,
+                        "height": 3
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "52c6597f",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "2eb723f9",
+                                    "fields": [
+                                        {
+                                            "name": "counter",
+                                            "expression": "`counter`"
+                                        }
+                                    ],
+                                    "parameterValues": [
+                                        {
+                                            "keyword": "category",
+                                            "selection": {
+                                                "values": {
+                                                    "dataType": "STRING",
+                                                    "values": [
+                                                        {
+                                                            "value": "Governance"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "keyword": "severity",
+                                            "selection": {
+                                                "values": {
+                                                    "dataType": "STRING",
+                                                    "values": [
+                                                        {
+                                                            "value": "Medium"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "disaggregated": true
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 2,
+                            "widgetType": "counter",
+                            "encodings": {
+                                "value": {
+                                    "fieldName": "counter",
+                                    "rowNumber": 1,
+                                    "displayName": "counter"
+                                }
+                            },
+                            "frame": {
+                                "title": "Medium",
+                                "showTitle": true
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 4,
+                        "y": 18,
+                        "width": 1,
+                        "height": 3
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "f2e4a39d",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "2eb723f9",
+                                    "fields": [
+                                        {
+                                            "name": "counter",
+                                            "expression": "`counter`"
+                                        }
+                                    ],
+                                    "parameterValues": [
+                                        {
+                                            "keyword": "category",
+                                            "selection": {
+                                                "values": {
+                                                    "dataType": "STRING",
+                                                    "values": [
+                                                        {
+                                                            "value": "Governance"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "keyword": "severity",
+                                            "selection": {
+                                                "values": {
+                                                    "dataType": "STRING",
+                                                    "values": [
+                                                        {
+                                                            "value": "High"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "disaggregated": true
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 2,
+                            "widgetType": "counter",
+                            "encodings": {
+                                "value": {
+                                    "fieldName": "counter",
+                                    "rowNumber": 1,
+                                    "displayName": "counter"
+                                }
+                            },
+                            "frame": {
+                                "title": "High",
+                                "showTitle": true
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 3,
+                        "y": 18,
+                        "width": 1,
+                        "height": 3
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "c0d0120c",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "2eb723f9",
+                                    "fields": [
+                                        {
+                                            "name": "counter",
+                                            "expression": "`counter`"
+                                        }
+                                    ],
+                                    "parameterValues": [
+                                        {
+                                            "keyword": "category",
+                                            "selection": {
+                                                "values": {
+                                                    "dataType": "STRING",
+                                                    "values": [
+                                                        {
+                                                            "value": "Governance"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "keyword": "severity",
+                                            "selection": {
+                                                "values": {
+                                                    "dataType": "STRING",
+                                                    "values": [
+                                                        {
+                                                            "value": "Low"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "disaggregated": true
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 2,
+                            "widgetType": "counter",
+                            "encodings": {
+                                "value": {
+                                    "fieldName": "counter",
+                                    "rowNumber": 1,
+                                    "displayName": "counter"
+                                }
+                            },
+                            "frame": {
+                                "title": "Low",
+                                "showTitle": true
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 5,
+                        "y": 18,
+                        "width": 1,
+                        "height": 3
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "bc224f07",
+                        "queries": [
+                            {
+                                "name": "main_query",
+                                "query": {
+                                    "datasetName": "ac2810e1",
+                                    "fields": [
+                                        {
+                                            "name": "check_id",
+                                            "expression": "`check_id`"
+                                        },
+                                        {
+                                            "name": "Check",
+                                            "expression": "`Check`"
+                                        },
+                                        {
+                                            "name": "Severity",
+                                            "expression": "`Severity`"
+                                        },
+                                        {
+                                            "name": "Status",
+                                            "expression": "`Status`"
+                                        },
+                                        {
+                                            "name": "RunDate",
+                                            "expression": "`RunDate`"
+                                        },
+                                        {
+                                            "name": "Recommendation",
+                                            "expression": "`Recommendation`"
+                                        },
+                                        {
+                                            "name": "DAGF",
+                                            "expression": "`DAGF`"
+                                        }
+                                    ],
+                                    "disaggregated": true
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 1,
+                            "widgetType": "table",
+                            "encodings": {
+                                "columns": [
+                                    {
+                                        "fieldName": "check_id",
+                                        "booleanValues": [
+                                            "false",
+                                            "true"
+                                        ],
+                                        "imageUrlTemplate": "{{ @ }}",
+                                        "imageTitleTemplate": "{{ @ }}",
+                                        "imageWidth": "",
+                                        "imageHeight": "",
+                                        "linkUrlTemplate": "{{ @ }}",
+                                        "linkTextTemplate": "{{ @ }}",
+                                        "linkTitleTemplate": "{{ @ }}",
+                                        "linkOpenInNewTab": true,
+                                        "type": "string",
+                                        "displayAs": "string",
+                                        "visible": true,
+                                        "order": 100000,
+                                        "title": "Check id",
+                                        "allowSearch": false,
+                                        "alignContent": "left",
+                                        "allowHTML": false,
+                                        "highlightLinks": false,
+                                        "useMonospaceFont": false,
+                                        "preserveWhitespace": false,
+                                        "description": "Check id",
+                                        "displayName": "check_id"
+                                    },
+                                    {
+                                        "fieldName": "Check",
+                                        "booleanValues": [
+                                            "false",
+                                            "true"
+                                        ],
+                                        "imageUrlTemplate": "{{ @ }}",
+                                        "imageTitleTemplate": "{{ @ }}",
+                                        "imageWidth": "",
+                                        "imageHeight": "",
+                                        "linkUrlTemplate": "{{ @ }}",
+                                        "linkTextTemplate": "{{ @ }}",
+                                        "linkTitleTemplate": "{{ @ }}",
+                                        "linkOpenInNewTab": true,
+                                        "type": "string",
+                                        "displayAs": "string",
+                                        "visible": true,
+                                        "order": 100001,
+                                        "title": "Check",
+                                        "allowSearch": false,
+                                        "alignContent": "left",
+                                        "allowHTML": false,
+                                        "highlightLinks": false,
+                                        "useMonospaceFont": false,
+                                        "preserveWhitespace": false,
+                                        "displayName": "Check"
+                                    },
+                                    {
+                                        "fieldName": "Severity",
+                                        "booleanValues": [
+                                            "false",
+                                            "true"
+                                        ],
+                                        "imageUrlTemplate": "{{ @ }}",
+                                        "imageTitleTemplate": "{{ @ }}",
+                                        "imageWidth": "",
+                                        "imageHeight": "",
+                                        "linkUrlTemplate": "{{ @ }}",
+                                        "linkTextTemplate": "{{ @ }}",
+                                        "linkTitleTemplate": "{{ @ }}",
+                                        "linkOpenInNewTab": true,
+                                        "type": "string",
+                                        "displayAs": "string",
+                                        "visible": true,
+                                        "order": 100002,
+                                        "title": "Severity",
+                                        "allowSearch": false,
+                                        "alignContent": "left",
+                                        "allowHTML": false,
+                                        "highlightLinks": false,
+                                        "useMonospaceFont": false,
+                                        "preserveWhitespace": false,
+                                        "displayName": "Severity"
+                                    },
+                                    {
+                                        "fieldName": "Status",
+                                        "numberFormat": "0",
+                                        "booleanValues": [
+                                            "false",
+                                            "true"
+                                        ],
+                                        "imageUrlTemplate": "https://hls-eng-data-public.s3.amazonaws.com/img/{{Status}}.png",
+                                        "imageTitleTemplate": "{{ @ }}",
+                                        "imageWidth": "20",
+                                        "imageHeight": "20",
+                                        "linkUrlTemplate": "{{ @ }}",
+                                        "linkTextTemplate": "{{ @ }}",
+                                        "linkTitleTemplate": "{{ @ }}",
+                                        "linkOpenInNewTab": true,
+                                        "type": "integer",
+                                        "displayAs": "image",
+                                        "visible": true,
+                                        "order": 100003,
+                                        "title": "Status",
+                                        "allowSearch": false,
+                                        "alignContent": "right",
+                                        "allowHTML": false,
+                                        "highlightLinks": false,
+                                        "useMonospaceFont": false,
+                                        "preserveWhitespace": false,
+                                        "description": "Your workspace configuration status",
+                                        "displayName": "Status"
+                                    },
+                                    {
+                                        "fieldName": "RunDate",
+                                        "dateTimeFormat": "YYYY-MM-DD",
+                                        "booleanValues": [
+                                            "false",
+                                            "true"
+                                        ],
+                                        "imageUrlTemplate": "{{ @ }}",
+                                        "imageTitleTemplate": "{{ @ }}",
+                                        "imageWidth": "",
+                                        "imageHeight": "",
+                                        "linkUrlTemplate": "{{ @ }}",
+                                        "linkTextTemplate": "{{ @ }}",
+                                        "linkTitleTemplate": "{{ @ }}",
+                                        "linkOpenInNewTab": true,
+                                        "type": "date",
+                                        "displayAs": "datetime",
+                                        "visible": true,
+                                        "order": 100004,
+                                        "title": "Run date",
+                                        "allowSearch": false,
+                                        "alignContent": "right",
+                                        "allowHTML": false,
+                                        "highlightLinks": false,
+                                        "useMonospaceFont": false,
+                                        "preserveWhitespace": false,
+                                        "displayName": "RunDate"
+                                    },
+                                    {
+                                        "fieldName": "Recommendation",
+                                        "booleanValues": [
+                                            "false",
+                                            "true"
+                                        ],
+                                        "imageUrlTemplate": "{{ @ }}",
+                                        "imageTitleTemplate": "{{ @ }}",
+                                        "imageWidth": "",
+                                        "imageHeight": "",
+                                        "linkUrlTemplate": "{{ @ }}",
+                                        "linkTextTemplate": "{{ @ }}",
+                                        "linkTitleTemplate": "{{ @ }}",
+                                        "linkOpenInNewTab": true,
+                                        "type": "string",
+                                        "displayAs": "string",
+                                        "visible": true,
+                                        "order": 100005,
+                                        "title": "Recommendation",
+                                        "allowSearch": false,
+                                        "alignContent": "left",
+                                        "allowHTML": true,
+                                        "highlightLinks": false,
+                                        "useMonospaceFont": false,
+                                        "preserveWhitespace": false,
+                                        "displayName": "Recommendation"
+                                    },
+                                    {
+                                        "fieldName": "DAGF",
+                                        "booleanValues": [
+                                            "false",
+                                            "true"
+                                        ],
+                                        "imageUrlTemplate": "{{ @ }}",
+                                        "imageTitleTemplate": "{{ @ }}",
+                                        "imageWidth": "",
+                                        "imageHeight": "",
+                                        "linkUrlTemplate": "{{ @ }}",
+                                        "linkTextTemplate": "{{ @ }}",
+                                        "linkTitleTemplate": "{{ @ }}",
+                                        "linkOpenInNewTab": true,
+                                        "type": "string",
+                                        "displayAs": "string",
+                                        "visible": true,
+                                        "order": 100009,
+                                        "title": "Databricks AI Governance Framework",
+                                        "allowSearch": false,
+                                        "alignContent": "left",
+                                        "allowHTML": false,
+                                        "highlightLinks": false,
+                                        "useMonospaceFont": false,
+                                        "preserveWhitespace": false,
+                                        "description": "Databricks AI Governance Framework",
+                                        "displayName": "DAGF"
+                                    }
+                                ]
+                            },
+                            "invisibleColumns": [
+                                {
+                                    "numberFormat": "0",
+                                    "booleanValues": [
+                                        "false",
+                                        "true"
+                                    ],
+                                    "imageUrlTemplate": "{{ @ }}",
+                                    "imageTitleTemplate": "{{ @ }}",
+                                    "imageWidth": "",
+                                    "imageHeight": "",
+                                    "linkUrlTemplate": "{{ @ }}",
+                                    "linkTextTemplate": "{{ @ }}",
+                                    "linkTitleTemplate": "{{ @ }}",
+                                    "linkOpenInNewTab": true,
+                                    "name": "ord",
+                                    "type": "integer",
+                                    "displayAs": "number",
+                                    "order": 100006,
+                                    "title": "ord",
+                                    "allowSearch": false,
+                                    "alignContent": "right",
+                                    "allowHTML": false,
+                                    "highlightLinks": false,
+                                    "useMonospaceFont": false,
+                                    "preserveWhitespace": false
+                                },
+                                {
+                                    "booleanValues": [
+                                        "false",
+                                        "true"
+                                    ],
+                                    "imageUrlTemplate": "{{ @ }}",
+                                    "imageTitleTemplate": "{{ @ }}",
+                                    "imageWidth": "",
+                                    "imageHeight": "",
+                                    "linkUrlTemplate": "{{ @ }}",
+                                    "linkTextTemplate": "{{ @ }}",
+                                    "linkTitleTemplate": "{{ @ }}",
+                                    "linkOpenInNewTab": true,
+                                    "name": "workspaceid",
+                                    "type": "string",
+                                    "displayAs": "string",
+                                    "order": 100007,
+                                    "title": "workspaceid",
+                                    "allowSearch": false,
+                                    "alignContent": "left",
+                                    "allowHTML": false,
+                                    "highlightLinks": false,
+                                    "useMonospaceFont": false,
+                                    "preserveWhitespace": false
+                                },
+                                {
+                                    "booleanValues": [
+                                        "false",
+                                        "true"
+                                    ],
+                                    "imageUrlTemplate": "{{ @ }}",
+                                    "imageTitleTemplate": "{{ @ }}",
+                                    "imageWidth": "",
+                                    "imageHeight": "",
+                                    "linkUrlTemplate": "{{ @ }}",
+                                    "linkTextTemplate": "{{ @ }}",
+                                    "linkTitleTemplate": "{{ @ }}",
+                                    "linkOpenInNewTab": true,
+                                    "name": "name",
+                                    "type": "string",
+                                    "displayAs": "string",
+                                    "order": 100008,
+                                    "title": "name",
+                                    "allowSearch": false,
+                                    "alignContent": "left",
+                                    "allowHTML": false,
+                                    "highlightLinks": false,
+                                    "useMonospaceFont": false,
+                                    "preserveWhitespace": false
+                                }
+                            ],
+                            "allowHTMLByDefault": false,
+                            "itemsPerPage": 25,
+                            "paginationSize": "default",
+                            "condensed": false,
+                            "withRowNumber": true,
+                            "frame": {
+                                "title": "Governance summary",
+                                "showTitle": true,
+                                "showDescription": false
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 21,
+                        "width": 6,
+                        "height": 8
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "f81ab6be",
+                        "queries": [
+                            {
+                                "name": "9381a4243d0445cda495214b07bec715",
+                                "query": {
+                                    "datasetName": "f1a73f2e",
+                                    "disaggregated": true
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 0,
+                            "viz_spec": {
+                                "display_name": "Analysis date",
+                                "description": "",
+                                "viz_type": "COUNTER",
+                                "serialized_options": "{\"condensed\": true, \"counterColName\": \"date\", \"counterLabel\": \"\", \"formatTargetValue\": false, \"rowNumber\": 1, \"stringDecChar\": \".\", \"stringDecimal\": 0, \"stringThouSep\": \",\", \"targetColName\": \"\", \"targetRowNumber\": 1, \"tooltipFormat\": \"0,0.000\", \"withRowNumber\": true}",
+                                "query_name": "9381a4243d0445cda495214b07bec715"
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 6,
+                        "width": 2,
+                        "height": 3
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "a3c4ac2f",
+                        "queries": [
+                            {
+                                "name": "d4a3409800e64b08a2c593ee8344615d",
+                                "query": {
+                                    "datasetName": "367ba156",
+                                    "disaggregated": true
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 0,
+                            "viz_spec": {
+                                "display_name": "Workspace",
+                                "description": "",
+                                "viz_type": "COUNTER",
+                                "serialized_options": "{\"counterColName\": \"value\", \"counterLabel\": \"workspace name\", \"rowNumber\": 3, \"stringDecChar\": \".\", \"stringDecimal\": 0, \"stringThouSep\": \",\", \"targetRowNumber\": 1, \"tooltipFormat\": \"0,0.000\"}",
+                                "query_name": "d4a3409800e64b08a2c593ee8344615d"
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 2,
+                        "y": 6,
+                        "width": 2,
+                        "height": 3
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "429d15b7",
+                        "queries": [
+                            {
+                                "name": "d4a3409800e64b08a2c593ee8344615d",
+                                "query": {
+                                    "datasetName": "367ba156",
+                                    "disaggregated": true
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 0,
+                            "viz_spec": {
+                                "display_name": "Region",
+                                "description": "",
+                                "viz_type": "COUNTER",
+                                "serialized_options": "{\"counterColName\": \"value\", \"counterLabel\": \"\", \"rowNumber\": 2, \"stringDecChar\": \".\", \"stringDecimal\": 0, \"stringThouSep\": \",\", \"targetRowNumber\": 1, \"tooltipFormat\": \"0,0.000\"}",
+                                "query_name": "d4a3409800e64b08a2c593ee8344615d"
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 5,
+                        "y": 6,
+                        "width": 1,
+                        "height": 3
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "49813883",
+                        "queries": [
+                            {
+                                "name": "d4a3409800e64b08a2c593ee8344615d",
+                                "query": {
+                                    "datasetName": "367ba156",
+                                    "disaggregated": true
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 0,
+                            "viz_spec": {
+                                "display_name": "Pricing tier",
+                                "description": "",
+                                "viz_type": "COUNTER",
+                                "serialized_options": "{\"counterColName\": \"value\", \"counterLabel\": \"\", \"rowNumber\": 4, \"stringDecChar\": \".\", \"stringDecimal\": 0, \"stringThouSep\": \",\", \"targetRowNumber\": 1, \"tooltipFormat\": \"0,0.000\"}",
+                                "query_name": "d4a3409800e64b08a2c593ee8344615d"
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 4,
+                        "y": 6,
+                        "width": 1,
+                        "height": 3
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "eff6f176",
+                        "queries": [
+                            {
+                                "name": "dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c3a071cefab59cfb002d54701_name",
+                                "query": {
+                                    "datasetName": "9264c052",
+                                    "fields": [
+                                        {
+                                            "name": "name",
+                                            "expression": "`name`"
+                                        },
+                                        {
+                                            "name": "name_associativity",
+                                            "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39e31a178f18071c99a36afe_workspaceid",
+                                "query": {
+                                    "datasetName": "2eb723f9",
+                                    "parameters": [
+                                        {
+                                            "name": "workspaceid",
+                                            "keyword": "workspaceid"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39cd13a7839134a5179b63ef_workspaceid",
+                                "query": {
+                                    "datasetName": "ac2810e1",
+                                    "parameters": [
+                                        {
+                                            "name": "workspaceid",
+                                            "keyword": "workspaceid"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39dd18b48f14c1bfe955857b_workspaceid",
+                                "query": {
+                                    "datasetName": "5e73087c",
+                                    "parameters": [
+                                        {
+                                            "name": "workspaceid",
+                                            "keyword": "workspaceid"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39f61ff89c9e7a117abca313_workspaceid",
+                                "query": {
+                                    "datasetName": "de3b92f6",
+                                    "parameters": [
+                                        {
+                                            "name": "workspaceid",
+                                            "keyword": "workspaceid"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c3a0119679c0e76c056470485_workspaceid",
+                                "query": {
+                                    "datasetName": "f1a73f2e",
+                                    "parameters": [
+                                        {
+                                            "name": "workspaceid",
+                                            "keyword": "workspaceid"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39d2166ab9af05dcb7e9e6ec_workspaceid",
+                                "query": {
+                                    "datasetName": "367ba156",
+                                    "parameters": [
+                                        {
+                                            "name": "workspaceid",
+                                            "keyword": "workspaceid"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39f11b76b6fd549afe6bef28_workspaceid",
+                                "query": {
+                                    "datasetName": "7088f4c8",
+                                    "parameters": [
+                                        {
+                                            "name": "workspaceid",
+                                            "keyword": "workspaceid"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef59a3c2411c948c712c72eb273f62_workspaceid",
+                                "query": {
+                                    "datasetName": "a4f85627",
+                                    "parameters": [
+                                        {
+                                            "name": "workspaceid",
+                                            "keyword": "workspaceid"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 2,
+                            "widgetType": "filter-single-select",
+                            "encodings": {
+                                "fields": [
+                                    {
+                                        "parameterName": "workspaceid",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39e31a178f18071c99a36afe_workspaceid"
+                                    },
+                                    {
+                                        "parameterName": "workspaceid",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39cd13a7839134a5179b63ef_workspaceid"
+                                    },
+                                    {
+                                        "parameterName": "workspaceid",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39dd18b48f14c1bfe955857b_workspaceid"
+                                    },
+                                    {
+                                        "parameterName": "workspaceid",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39f61ff89c9e7a117abca313_workspaceid"
+                                    },
+                                    {
+                                        "parameterName": "workspaceid",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c3a0119679c0e76c056470485_workspaceid"
+                                    },
+                                    {
+                                        "parameterName": "workspaceid",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39d2166ab9af05dcb7e9e6ec_workspaceid"
+                                    },
+                                    {
+                                        "parameterName": "workspaceid",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39f11b76b6fd549afe6bef28_workspaceid"
+                                    },
+                                    {
+                                        "fieldName": "name",
+                                        "displayName": "name",
+                                        "queryName": "dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c3a071cefab59cfb002d54701_name"
+                                    },
+                                    {
+                                        "parameterName": "workspaceid",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef59a3c2411c948c712c72eb273f62_workspaceid"
+                                    }
+                                ]
+                            },
+                            "frame": {
+                                "title": "Workspace",
+                                "showTitle": true
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 4,
+                        "width": 3,
+                        "height": 2
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "e5b081d5",
+                        "queries": [
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39f11b76b6fd549afe6bef28_date_param",
+                                "query": {
+                                    "datasetName": "7088f4c8",
+                                    "parameters": [
+                                        {
+                                            "name": "date_param",
+                                            "keyword": "date_param"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39e31a178f18071c99a36afe_date_param",
+                                "query": {
+                                    "datasetName": "2eb723f9",
+                                    "parameters": [
+                                        {
+                                            "name": "date_param",
+                                            "keyword": "date_param"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39cd13a7839134a5179b63ef_date_param",
+                                "query": {
+                                    "datasetName": "ac2810e1",
+                                    "parameters": [
+                                        {
+                                            "name": "date_param",
+                                            "keyword": "date_param"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39dd18b48f14c1bfe955857b_date_param",
+                                "query": {
+                                    "datasetName": "5e73087c",
+                                    "parameters": [
+                                        {
+                                            "name": "date_param",
+                                            "keyword": "date_param"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c3a0119679c0e76c056470485_date_param",
+                                "query": {
+                                    "datasetName": "f1a73f2e",
+                                    "parameters": [
+                                        {
+                                            "name": "date_param",
+                                            "keyword": "date_param"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39d2166ab9af05dcb7e9e6ec_date_param",
+                                "query": {
+                                    "datasetName": "367ba156",
+                                    "parameters": [
+                                        {
+                                            "name": "date_param",
+                                            "keyword": "date_param"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            },
+                            {
+                                "name": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39f61ff89c9e7a117abca313_current_run_date",
+                                "query": {
+                                    "datasetName": "de3b92f6",
+                                    "parameters": [
+                                        {
+                                            "name": "current_run_date",
+                                            "keyword": "current_run_date"
+                                        }
+                                    ],
+                                    "disaggregated": false
+                                }
+                            }
+                        ],
+                        "spec": {
+                            "version": 2,
+                            "widgetType": "filter-date-picker",
+                            "encodings": {
+                                "fields": [
+                                    {
+                                        "parameterName": "date_param",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39f11b76b6fd549afe6bef28_date_param"
+                                    },
+                                    {
+                                        "parameterName": "date_param",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39e31a178f18071c99a36afe_date_param"
+                                    },
+                                    {
+                                        "parameterName": "date_param",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39cd13a7839134a5179b63ef_date_param"
+                                    },
+                                    {
+                                        "parameterName": "date_param",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39dd18b48f14c1bfe955857b_date_param"
+                                    },
+                                    {
+                                        "parameterName": "date_param",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c3a0119679c0e76c056470485_date_param"
+                                    },
+                                    {
+                                        "parameterName": "date_param",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39d2166ab9af05dcb7e9e6ec_date_param"
+                                    },
+                                    {
+                                        "parameterName": "current_run_date",
+                                        "queryName": "parameter_dashboards/01ef540c39c01f018d943a7e42281236/datasets/01ef540c39f61ff89c9e7a117abca313_current_run_date"
+                                    }
+                                ]
+                            },
+                            "frame": {
+                                "title": "Analysis date ",
+                                "showTitle": true
+                            }
+                        }
+                    },
+                    "position": {
+                        "x": 3,
+                        "y": 4,
+                        "width": 3,
+                        "height": 2
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "78559a07",
+                        "textbox_spec": "> Caution: \nPlease make sure to review the SAT report with your business stakeholders, administrators, security team, and auditors about the SAT report and assess your organizational security requirements before making any security improvements based on the report, not all deviations are required to be mitigated. Some of the recommendations may have cost implications, and some of the security features recommended may have dependency feature limitations; please thoroughly review individual features documentation before making changes to your security configurations."
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 6,
+                        "height": 2
+                    }
+                },
+                {
+                    "widget": {
+                        "name": "c4fe8ad6",
+                        "textbox_spec": "> Note:If you haven't already done so, please make sure you completed the self-assessment for SSO, SCIM, and Table Access Control checks. As per the [Usage instructions](https://github.com/databricks-industry-solutions/security-analysis-tool/blob/main/docs/setup.md#usage), Workspace -> Applications -> SAT -> files -> self_assessment_checks.yaml and make sure the \"enabled\" values reflect your environment for the listed manual checks with either true or false. SAT will automatically check the rest of the configurations."
+                    },
+                    "position": {
+                        "x": 0,
+                        "y": 2,
+                        "width": 6,
+                        "height": 2
+                    }
+                }
+            ]
+        }
+    ]
+}

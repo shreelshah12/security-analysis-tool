@@ -145,3 +145,8 @@ readBestPracticesConfigsFile()
 
 # Initialize sat dasf mapping
 load_sat_dasf_mapping()
+
+# COMMAND ----------
+
+# Initialize sat dagf mapping
+load_sat_dagf_mapping()
