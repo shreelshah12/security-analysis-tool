@@ -55,9 +55,9 @@ After creating the App Registration and client secret, you will need to add the 
 - Select `Microsoft Entra ID Managed Application` as the service principal type.
 - Paste the App Client ID and create a new name for the service principal.
 - Click Add.
-- The Service Principal must be granted the `Account Admin` role. This role provides the ability to manage account-level settings and permissions.
-- Assign the Workspace Admin Role: The Service Principal must be assigned the `Workspace Admin` role for each workspace it will manage. This role provides the ability to manage workspace-level settings and permissions.
-- Add to the Metastore Admin Group: The Service Principal must be added to the `Metastore Admin` group or role. This role provides the ability to manage metastore-level settings and permissions.
+- The Service Principal must be granted the `Account Admin` role. This role provides the ability to read account-level settings and permissions.
+- Assign the Workspace Admin Role: The Service Principal must be assigned the `Workspace Admin` role for each workspace it will read. This role provides the ability to read workspace-level settings and permissions.
+- Add to the Metastore Admin Group: The Service Principal must be added to the `Metastore Admin` group or role. This role provides the ability to read metastore-level settings and permissions.
 
 ![Azure_SP_Workspace](../images/azure_ws.png)
 
