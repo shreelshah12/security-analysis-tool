@@ -4,7 +4,7 @@
 
 - id: 18
   enabled: false
-  check: Enable single sign-on
+  check: Enable Single Sign-On
 
 - id: 19
   enabled: false
